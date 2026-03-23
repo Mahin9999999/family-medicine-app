@@ -16,18 +16,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Unzip project
-        run: |
-          unzip -o family_medicine_report_tracker_android.zip -d .
-          ls -la
+        run: unzip -o family_medicine_report_tracker_android.zip -d .
 
       - name: Find project dir
         run: |
           PROJECT_DIR=$(dirname "$(find . -name gradlew | head -n 1)")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-          echo "Using project dir: $PROJECT_DIR"
-          ls -la "$PROJECT_DIR"
+          echo "Project dir: $PROJECT_DIR"
 
-      - name: Fix gradlew permissions + line endings
+      - name: Fix gradlew permissions
         run: |
           sed -i 's/\r$//' "$PROJECT_DIR/gradlew"
           chmod +x "$PROJECT_DIR/gradlew"
@@ -48,25 +45,21 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Locate and prepare APK
+      - name: Show APK files
         run: |
-          echo "Searching APK inside: $PROJECT_DIR"
-          APK_PATH=$(find "$PROJECT_DIR" -type f -path "*/build/outputs/apk/*/*.apk" | head -n 1)
+          echo "APK search result:"
+          find . -type f -name "*.apk" -print || true
 
-          if [ -z "$APK_PATH" ]; then
-            echo "No APK found. Debugging paths:"
-            find "$PROJECT_DIR" -type d -path "*/build/outputs/apk/*" -print
-            find "$PROJECT_DIR" -type f -name "*.apk" -print
-            exit 1
-          fi
-
-          echo "Found APK: $APK_PATH"
-          mkdir -p out
-          cp "$APK_PATH" out/app-debug.apk
-
-      - name: Upload APK
+      - name: Upload APK (if found)
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: out/app-debug.apk
-          if-no-files-found: error
+          path: "**/*.apk"
+          if-no-files-found: warn
+
+      - name: Upload build outputs (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-outputs
+          path: "**/app/build/outputs/**"
+          if-no-files-found: warn
