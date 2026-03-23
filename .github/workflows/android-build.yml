@@ -2,6 +2,8 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -19,7 +21,6 @@ jobs:
           ls -la
 
       - name: Find project dir
-        id: proj
         run: |
           PROJECT_DIR=$(dirname "$(find . -name gradlew | head -n 1)")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
@@ -35,7 +36,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -47,7 +48,7 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: ./gradlew :app:assembleDebug --stacktrace
 
-            - name: Locate APK
+      - name: Locate APK
         run: |
           find . -type f -name "*.apk" | sed 's/^/APK: /'
 
