@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -48,14 +48,25 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Locate APK
+      - name: Locate and prepare APK
         run: |
-          find . -type f -name "*.apk" | sed 's/^/APK: /'
+          echo "Searching APK inside: $PROJECT_DIR"
+          APK_PATH=$(find "$PROJECT_DIR" -type f -path "*/build/outputs/apk/*/*.apk" | head -n 1)
+
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found. Debugging paths:"
+            find "$PROJECT_DIR" -type d -path "*/build/outputs/apk/*" -print
+            find "$PROJECT_DIR" -type f -name "*.apk" -print
+            exit 1
+          fi
+
+          echo "Found APK: $APK_PATH"
+          mkdir -p out
+          cp "$APK_PATH" out/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: |
-            **/app/build/outputs/apk/debug/*.apk
+          path: out/app-debug.apk
           if-no-files-found: error
