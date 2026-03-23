@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -13,9 +15,21 @@ jobs:
 
       - name: Unzip project
         run: |
-          unzip family_medicine_report_tracker_android.zip -d .
+          unzip -o family_medicine_report_tracker_android.zip -d .
           ls -la
-          ls -la family_medicine_report_tracker_android
+
+      - name: Find project dir
+        id: proj
+        run: |
+          PROJECT_DIR=$(dirname "$(find . -name gradlew | head -n 1)")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Using project dir: $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
+
+      - name: Fix gradlew permissions + line endings
+        run: |
+          sed -i 's/\r$//' "$PROJECT_DIR/gradlew"
+          chmod +x "$PROJECT_DIR/gradlew"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -30,11 +44,11 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Build Debug APK
-        working-directory: family_medicine_report_tracker_android
+        working-directory: ${{ env.PROJECT_DIR }}
         run: ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: family_medicine_report_tracker_android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
